@@ -1,0 +1,15 @@
+date,description,reference,amount
+2026-06-01,Receivable settled - Northbridge Retail,INV-1001,12840.00
+2026-06-02,Receivable settled - Vela Logistics,INV-1002,5420.00
+2026-06-03,Payable settled - AutoPrime Distributors,PO-2201,-21275.00
+2026-06-04,Receivable settled - Solaris Power Co,INV-1004,17360.00
+2026-06-06,Receivable settled - Terra Nova Farms,INV-1006,14390.00
+2026-06-08,Receivable settled - Meridian Supply Chain,INV-1007,11890.00
+2026-06-10,Payable settled - GreenGrid Utilities,PO-2205,-8825.00
+2026-06-11,Receivable settled - Vela Logistics,INV-1009,6410.00
+2026-06-12,Receivable settled - Harvest Trading LLC,INV-1010,3490.00
+2026-06-15,Receivable settled - Delta Fleet Services,INV-1011,7380.00
+2026-06-17,Receivable settled - AutoPrime Distributors,INV-1012,9540.00
+2026-06-18,FX settlement - EUR conversion,FX-3301,15220.00
+2026-06-19,Receivable posted - Coastal Freight,INV-1015,8250.00
+2026-06-20,Payable posted - Office lease,PO-2210,-4100.00

@@ -1,0 +1,15 @@
+date,description,reference,amount
+2026-06-01,Customer payment - Northbridge,INV-1001,12840.00
+2026-06-02,Customer payment - Vela Logistics,INV-1002,5420.00
+2026-06-03,Supplier payment - AutoPrime,PO-2201,-21275.00
+2026-06-04,Customer payment - Solaris Power,INV-1004,17630.00
+2026-06-05,Bank service fee,,-45.00
+2026-06-06,Customer payment - Terra Nova,INV-1006,14390.00
+2026-06-09,Customer payment - Meridian,INV-1007,11890.00
+2026-06-10,Supplier payment - GreenGrid,PO-2205,-8825.00
+2026-06-11,Wire transfer received,INV-1009,6410.00
+2026-06-12,Customer payment - Harvest Trading,INV-1010,3490.00
+2026-06-15,Customer payment - Delta Fleet,INV-1011,7380.00
+2026-06-16,Interest earned,,12.35
+2026-06-17,Customer payment - AutoPrime,INV-1012,9540.00
+2026-06-18,FX settlement - EUR conversion,FX-3301,15220.00
