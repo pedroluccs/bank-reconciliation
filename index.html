@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bank Reconciliation</title>
+<style>
+  :root{
+    --bg:#F4F5F7;--surface:#FFFFFF;--ink:#16202E;--muted:#5B6472;
+    --primary:#1F3A5F;--pos:#2E7D5B;--neg:#C0492F;--warn:#D98324;--line:#E3E6EB;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-variant-numeric:tabular-nums;line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 24px 56px}
+  header{border-bottom:2px solid var(--primary);padding-bottom:16px;margin-bottom:24px}
+  h1{font-size:22px;margin:0;letter-spacing:.2px}
+  .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:18px}
+  .card h2{font-size:13px;margin:0 0 14px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+
+  /* Upload panel */
+  .setup{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:680px){.setup{grid-template-columns:1fr}}
+  .drop{border:1px dashed #C4CBD4;border-radius:9px;padding:16px;text-align:center;transition:.15s;background:#FBFCFD}
+  .drop.ready{border-color:var(--pos);background:#F1F8F4}
+  .drop label{font-size:13px;color:var(--muted);display:block;margin-bottom:8px}
+  .drop .fname{font-size:12.5px;color:var(--pos);margin-top:8px;min-height:16px;font-weight:600}
+  input[type=file]{font-size:12px;max-width:100%}
+  .controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:16px}
+  .controls .tol{font-size:13px;color:var(--muted)}
+  .controls input[type=number]{width:56px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;font:inherit}
+  button{font:inherit;cursor:pointer;border-radius:8px;padding:9px 18px;font-size:13.5px;font-weight:600;border:1px solid var(--primary)}
+  .btn-primary{background:var(--primary);color:#fff}
+  .btn-primary:hover{background:#16304F}
+  .btn-ghost{background:transparent;color:var(--primary)}
+  .btn-ghost:hover{background:#EEF2F6}
+  .hint{font-size:12px;color:var(--muted);margin-top:10px}
+
+  /* Results */
+  #results{display:none}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .kpi .val{font-size:26px;font-weight:600;margin-top:4px}
+  .kpi .val.pos{color:var(--pos)}.kpi .val.neg{color:var(--neg)}.kpi .val.warn{color:var(--warn)}
+  .kpi .note{font-size:12px;color:var(--muted);margin-top:2px}
+
+  /* Bridge */
+  .bridge{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:18px}
+  .bridge h2{font-size:13px;margin:0 0 14px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+  .brow{display:flex;justify-content:space-between;padding:7px 0;font-size:14px;border-bottom:1px solid #F0F2F4}
+  .brow.total{border-top:2px solid var(--ink);border-bottom:none;margin-top:6px;padding-top:12px;font-weight:600}
+  .brow .num{font-variant-numeric:tabular-nums}
+  .badge{display:inline-block;padding:6px 16px;border-radius:24px;font-size:14px;font-weight:700;margin-top:14px}
+  .badge.ok{background:#E7F2EC;color:var(--pos)}
+  .badge.bad{background:#F7E3DE;color:var(--neg)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:680px){.cols{grid-template-columns:1fr}}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .amt-neg{color:var(--neg)}
+  details summary{cursor:pointer;font-size:13px;color:var(--primary);font-weight:600;padding:4px 0}
+  .disc-row td{background:#FCF4EA}
+  .empty{color:var(--muted);font-size:13px;padding:6px 0}
+  footer{margin-top:34px;font-size:12px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Bank Reconciliation</h1>
+    <div class="sub">Match a bank statement against a ledger export &middot; runs entirely in your browser</div>
+  </header>
+
+  <div class="card">
+    <h2>1 &middot; Load your files</h2>
+    <div class="setup">
+      <div class="drop" id="dropBank">
+        <label>Bank statement (CSV)</label>
+        <input type="file" id="bankFile" accept=".csv" />
+        <div class="fname" id="bankName"></div>
+      </div>
+      <div class="drop" id="dropLedger">
+        <label>Ledger export (CSV)</label>
+        <input type="file" id="ledgerFile" accept=".csv" />
+        <div class="fname" id="ledgerName"></div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn-primary" id="runBtn">Reconcile</button>
+      <button class="btn-ghost" id="sampleBtn">Use sample data</button>
+      <span class="tol">Date tolerance: <input type="number" id="tol" value="3" min="0" max="30" /> days</span>
+    </div>
+    <div class="hint">Expected columns: <code>date, description, reference, amount</code> &middot; amounts signed (inflows +, outflows &minus;). No data leaves your browser.</div>
+  </div>
+
+  <div id="results">
+    <section class="kpis" id="kpis"></section>
+
+    <div class="bridge" id="bridge"></div>
+
+    <div class="card">
+      <h2>Amount discrepancies</h2>
+      <div id="discBox"></div>
+    </div>
+
+    <div class="cols">
+      <div class="card">
+        <h2>On bank, not in ledger</h2>
+        <div id="bankOnlyBox"></div>
+      </div>
+      <div class="card">
+        <h2>In ledger, not on bank</h2>
+        <div id="ledgerOnlyBox"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <details>
+        <summary id="matchedSummary">Matched transactions</summary>
+        <div id="matchedBox" style="margin-top:12px"></div>
+      </details>
+    </div>
+  </div>
+
+  <footer>Portfolio project by Pedro Marques &middot; sample data is synthetic &middot; JavaScript port of the included <code>reconcile.py</code> engine</footer>
+</div>
+
+<script>
+const CENTS = 0.005;
+
+const SAMPLE_BANK = `date,description,reference,amount
+2026-06-01,Customer payment - Northbridge,INV-1001,12840.00
+2026-06-02,Customer payment - Vela Logistics,INV-1002,5420.00
+2026-06-03,Supplier payment - AutoPrime,PO-2201,-21275.00
+2026-06-04,Customer payment - Solaris Power,INV-1004,17630.00
+2026-06-05,Bank service fee,,-45.00
+2026-06-06,Customer payment - Terra Nova,INV-1006,14390.00
+2026-06-09,Customer payment - Meridian,INV-1007,11890.00
+2026-06-10,Supplier payment - GreenGrid,PO-2205,-8825.00
+2026-06-11,Wire transfer received,INV-1009,6410.00
+2026-06-12,Customer payment - Harvest Trading,INV-1010,3490.00
+2026-06-15,Customer payment - Delta Fleet,INV-1011,7380.00
+2026-06-16,Interest earned,,12.35
+2026-06-17,Customer payment - AutoPrime,INV-1012,9540.00
+2026-06-18,FX settlement - EUR conversion,FX-3301,15220.00`;
+
+const SAMPLE_LEDGER = `date,description,reference,amount
+2026-06-01,Receivable settled - Northbridge Retail,INV-1001,12840.00
+2026-06-02,Receivable settled - Vela Logistics,INV-1002,5420.00
+2026-06-03,Payable settled - AutoPrime Distributors,PO-2201,-21275.00
+2026-06-04,Receivable settled - Solaris Power Co,INV-1004,17360.00
+2026-06-06,Receivable settled - Terra Nova Farms,INV-1006,14390.00
+2026-06-08,Receivable settled - Meridian Supply Chain,INV-1007,11890.00
+2026-06-10,Payable settled - GreenGrid Utilities,PO-2205,-8825.00
+2026-06-11,Receivable settled - Vela Logistics,INV-1009,6410.00
+2026-06-12,Receivable settled - Harvest Trading LLC,INV-1010,3490.00
+2026-06-15,Receivable settled - Delta Fleet Services,INV-1011,7380.00
+2026-06-17,Receivable settled - AutoPrime Distributors,INV-1012,9540.00
+2026-06-18,FX settlement - EUR conversion,FX-3301,15220.00
+2026-06-19,Receivable posted - Coastal Freight,INV-1015,8250.00
+2026-06-20,Payable posted - Office lease,PO-2210,-4100.00`;
+
+let bankText = null, ledgerText = null;
+
+function parseCSV(text){
+  const lines = text.trim().split(/\r?\n/);
+  const headers = splitLine(lines[0]).map(h=>h.trim().toLowerCase());
+  return lines.slice(1).filter(l=>l.trim()).map(line=>{
+    const cells = splitLine(line);
+    const row = {};
+    headers.forEach((h,i)=>row[h]=(cells[i]||"").trim());
+    return {
+      date: row.date,
+      description: row.description||"",
+      reference: row.reference||"",
+      amount: Math.round(parseFloat(row.amount)*100)/100,
+      matched: false
+    };
+  });
+}
+function splitLine(line){
+  const out=[]; let cur=""; let q=false;
+  for(const ch of line){
+    if(ch==='"'){q=!q;}
+    else if(ch===","&&!q){out.push(cur);cur="";}
+    else cur+=ch;
+  }
+  out.push(cur); return out;
+}
+const daysBetween=(a,b)=>Math.abs((new Date(a)-new Date(b))/86400000);
+
+function reconcile(bank, ledger, tol){
+  const matches=[];
+  // Pass 1: reference match
+  const byRef={};
+  ledger.forEach(l=>{ if(l.reference){(byRef[l.reference]=byRef[l.reference]||[]).push(l);} });
+  bank.forEach(b=>{
+    if(!b.reference) return;
+    const cand=(byRef[b.reference]||[]).find(l=>!l.matched);
+    if(cand){
+      b.matched=cand.matched=true;
+      matches.push({bank:b,ledger:cand,gap:daysBetween(b.date,cand.date),delta:Math.round((b.amount-cand.amount)*100)/100});
+    }
+  });
+  // Pass 2: amount + date proximity
+  bank.forEach(b=>{
+    if(b.matched) return;
+    let best=null;
+    ledger.forEach(l=>{
+      if(l.matched) return;
+      if(Math.abs(b.amount-l.amount)<=CENTS && daysBetween(b.date,l.date)<=tol){
+        const gap=daysBetween(b.date,l.date);
+        if(!best||gap<best.gap) best={ledger:l,gap};
+      }
+    });
+    if(best){ b.matched=best.ledger.matched=true; matches.push({bank:b,ledger:best.ledger,gap:best.gap,delta:0}); }
+  });
+  return {
+    matches,
+    unmatchedBank: bank.filter(b=>!b.matched),
+    unmatchedLedger: ledger.filter(l=>!l.matched)
+  };
+}
+
+const money=n=>(n<0?"-":"")+"$"+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const sum=arr=>Math.round(arr.reduce((s,t)=>s+t.amount,0)*100)/100;
+
+function run(){
+  if(!bankText||!ledgerText){ alert("Load both files first, or click \"Use sample data\"."); return; }
+  const tol=parseInt(document.getElementById("tol").value)||0;
+  const bank=parseCSV(bankText), ledger=parseCSV(ledgerText);
+  const {matches,unmatchedBank,unmatchedLedger}=reconcile(bank,ledger,tol);
+
+  const clean=matches.filter(m=>Math.abs(m.delta)<=CENTS);
+  const disc=matches.filter(m=>Math.abs(m.delta)>CENTS);
+  const bankTotal=sum(bank), ledgerTotal=sum(ledger);
+  const ubTotal=sum(unmatchedBank), ulTotal=sum(unmatchedLedger);
+  const discNet=Math.round(disc.reduce((s,m)=>s+m.delta,0)*100)/100;
+
+  // KPIs
+  document.getElementById("kpis").innerHTML=[
+    {lbl:"Matched cleanly",val:clean.length,cls:"pos",note:"references &amp; amounts agree"},
+    {lbl:"Discrepancies",val:disc.length,cls:disc.length?"warn":"pos",note:"amount mismatches"},
+    {lbl:"Bank only",val:unmatchedBank.length,cls:unmatchedBank.length?"neg":"pos",note:money(ubTotal)},
+    {lbl:"Ledger only",val:unmatchedLedger.length,cls:unmatchedLedger.length?"neg":"pos",note:money(ulTotal)},
+  ].map(k=>`<div class="kpi"><div class="lbl">${k.lbl}</div><div class="val ${k.cls}">${k.val}</div><div class="note">${k.note}</div></div>`).join("");
+
+  // Bridge
+  const expected=Math.round((ledgerTotal+ubTotal-ulTotal+discNet)*100)/100;
+  const residual=Math.round((bankTotal-expected)*100)/100;
+  const ok=Math.abs(residual)<=CENTS;
+  document.getElementById("bridge").innerHTML=`
+    <h2>Reconciliation bridge</h2>
+    <div class="brow"><span>Ledger net movement</span><span class="num">${money(ledgerTotal)}</span></div>
+    <div class="brow"><span>+ Bank-only items (fees, interest, unrecorded)</span><span class="num">${money(ubTotal)}</span></div>
+    <div class="brow"><span>&minus; Ledger-only items (not yet cleared)</span><span class="num">${money(-ulTotal)}</span></div>
+    <div class="brow"><span>+/&minus; Discrepancy adjustments</span><span class="num">${money(discNet)}</span></div>
+    <div class="brow total"><span>= Expected bank movement</span><span class="num">${money(expected)}</span></div>
+    <div class="brow"><span>Actual bank movement</span><span class="num">${money(bankTotal)}</span></div>
+    <span class="badge ${ok?'ok':'bad'}">${ok?'✓ RECONCILED':'✗ OUT OF BALANCE'} &middot; residual ${money(residual)}</span>`;
+
+  // Discrepancies
+  document.getElementById("discBox").innerHTML = disc.length ? tableHTML(
+    ["Reference","Bank","Ledger","Delta"],
+    disc.map(m=>[m.bank.reference,money(m.bank.amount),money(m.ledger.amount),`<span class="amt-neg">${money(m.delta)}</span>`]),
+    [false,true,true,true]) : `<div class="empty">None — every matched pair agreed on amount.</div>`;
+
+  // Unmatched
+  document.getElementById("bankOnlyBox").innerHTML = listHTML(unmatchedBank);
+  document.getElementById("ledgerOnlyBox").innerHTML = listHTML(unmatchedLedger);
+
+  // Matched
+  document.getElementById("matchedSummary").textContent=`Matched transactions (${matches.length})`;
+  document.getElementById("matchedBox").innerHTML = tableHTML(
+    ["Reference","Date","Amount","Note"],
+    matches.map(m=>[
+      m.bank.reference||m.ledger.reference,
+      m.bank.date,
+      money(m.bank.amount),
+      Math.abs(m.delta)>CENTS?`<span class="amt-neg">Δ ${money(m.delta)}</span>`:(m.gap>0?`${m.gap}d date gap`:"exact")
+    ]),
+    [false,false,true,false]);
+
+  document.getElementById("results").style.display="block";
+  document.getElementById("results").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function listHTML(items){
+  if(!items.length) return `<div class="empty">None.</div>`;
+  return tableHTML(["Date","Ref","Amount","Description"],
+    items.map(t=>[t.date, t.reference||"—", money(t.amount), t.description]),
+    [false,false,true,false]);
+}
+function tableHTML(headers, rows, numCols){
+  const th=headers.map((h,i)=>`<th class="${numCols[i]?'num':''}">${h}</th>`).join("");
+  const tr=rows.map(r=>"<tr>"+r.map((c,i)=>`<td class="${numCols[i]?'num':''}">${c}</td>`).join("")+"</tr>").join("");
+  return `<table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
+}
+
+// File handling
+function wireFile(inputId, nameId, dropId, setter){
+  document.getElementById(inputId).addEventListener("change",e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{ setter(rd.result); document.getElementById(nameId).textContent="✓ "+f.name; document.getElementById(dropId).classList.add("ready"); };
+    rd.readAsText(f);
+  });
+}
+wireFile("bankFile","bankName","dropBank",v=>bankText=v);
+wireFile("ledgerFile","ledgerName","dropLedger",v=>ledgerText=v);
+
+document.getElementById("sampleBtn").addEventListener("click",()=>{
+  bankText=SAMPLE_BANK; ledgerText=SAMPLE_LEDGER;
+  document.getElementById("bankName").textContent="✓ sample bank_statement.csv";
+  document.getElementById("ledgerName").textContent="✓ sample ledger.csv";
+  document.getElementById("dropBank").classList.add("ready");
+  document.getElementById("dropLedger").classList.add("ready");
+  run();
+});
+document.getElementById("runBtn").addEventListener("click",run);
+</script>
+</body>
+</html>

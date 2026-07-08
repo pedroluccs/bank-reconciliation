@@ -4,6 +4,10 @@ Automates the match between a **bank statement** and a **general-ledger export**
 
 Replaces the manual line-by-line tick-and-tie an analyst would otherwise do in a spreadsheet.
 
+Two ways to use it: a **Python command-line engine** (`reconcile.py`) and a **browser interface** (`index.html`) that runs the same logic client-side — upload two CSVs, or click *Use sample data*, and read the result on screen.
+
+> **Live demo:** enable GitHub Pages (Settings → Pages → deploy from `main`) and open `https://<your-username>.github.io/bank-reconciliation/`.
+
 ## What it does
 
 Given two CSVs (bank + ledger), the script:
@@ -37,7 +41,11 @@ RECONCILIATION BRIDGE
   STATUS: RECONCILED   (residual  $0.00)
 ```
 
-## Run it
+## Run it — in the browser
+
+Open `index.html` (double-click it, or serve the folder). Click **Use sample data** to see it work instantly, or upload your own bank and ledger CSVs. Everything runs locally in the browser — no data is uploaded anywhere.
+
+## Run it — command line
 
 No dependencies to install — standard library only (Python 3.9+).
 
